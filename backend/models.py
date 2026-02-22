@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
@@ -19,7 +21,7 @@ class User(Base):
 class Product(Base):
     __tablename__ = "products"
 
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, index=True)
     category = Column(String, index=True)
     description = Column(String)

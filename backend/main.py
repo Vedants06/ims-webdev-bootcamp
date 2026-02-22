@@ -70,9 +70,39 @@ def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    if user.role == "staff" and not user.verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is pending admin approval."
+        )
 
     access_token = create_access_token(data={"sub": user.email_id})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+
+
+@app.put("/users/verify/{user_id}", response_model=schemas.UserResponse)
+def verify_staff(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can verify staff")
+    
+    user = db.query(models.User).filter(models.User.id == user_id, models.User.role == "staff").first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Staff user not found")
+    
+    user.verified = True
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.get("/users/unverified", response_model=list[schemas.UserResponse])
+def list_unverified_staff(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can see unverified staff")
+    
+    staff_list = db.query(models.User).filter(models.User.role == "staff", models.User.verified == False).all()
+    return staff_list
 
 # Product endpoints
 

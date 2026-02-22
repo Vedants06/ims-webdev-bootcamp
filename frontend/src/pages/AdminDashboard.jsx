@@ -1,89 +1,208 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const AdminDashboard = () => {
+  const [pendingStaff, setPendingStaff] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null); 
+
+  const [formData, setFormData] = useState({
+    name: "", category: "", price: "", quantity: "",
+    description: "", img: "", restock: 5, status: "active", addedby: 1
+  });
+
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    fetchPendingStaff();
+    fetchProducts();
+  }, []);
+
+  //Staff
+  const fetchPendingStaff = async () => {
+    const res = await fetch("http://127.0.0.1:8000/users/unverified", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setPendingStaff(await res.json());
+  };
+
+  const approveStaff = async (id) => {
+    await fetch(`http://127.0.0.1:8000/users/verify/${id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchPendingStaff();
+  };
+
+  //Products
+  const fetchProducts = async () => {
+    const res = await fetch("http://127.0.0.1:8000/products");
+    if (res.ok) {
+      const data = await res.json();
+      setProducts(data.items);
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const url = editingProduct
+      ? `http://127.0.0.1:8000/products/${editingProduct.id}`
+      : "http://127.0.0.1:8000/products";
+
+    const method = editingProduct ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...formData,
+        price: parseFloat(formData.price),
+        quantity: parseInt(formData.quantity),
+      }),
+    });
+
+    if (res.ok) {
+      alert(editingProduct ? "Product updated!" : "Product added!");
+      setShowForm(false);
+      setEditingProduct(null);
+      setFormData({ name: "", category: "", price: "", quantity: "",
+        description: "", img: "", restock: 5, status: "active", addedby: 1 });
+      fetchProducts();
+    } else {
+      alert("Something went wrong");
+    }
+  };
+
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setFormData(product);  
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this product?")) return;
+    await fetch(`http://127.0.0.1:8000/products/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchProducts();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <StatCard title="Total Products" value="120" />
-        <StatCard title="Low Stock Items" value="8" />
-        <StatCard title="Total Sales" value="₹54,000" />
-        <StatCard title="Revenue" value="₹1,20,000" />
+      {/* Pending Staff  */}
+      <h2 className="text-xl font-semibold mb-4">Pending Staff Approval</h2>
+      <div className="bg-white p-6 rounded-xl shadow-sm mb-10">
+        {pendingStaff.length === 0 && <p>No staff pending approval.</p>}
+        {pendingStaff.map((staff) => (
+          <div key={staff.id} className="flex justify-between items-center border-b py-2">
+            <div>
+              <p>{staff.first_name} {staff.last_name}</p>
+              <p className="text-sm text-gray-500">{staff.email_id}</p>
+            </div>
+            <button onClick={() => approveStaff(staff.id)}
+              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+              Approve
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* Insights Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Recent Transactions */}
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-medium mb-4">Recent Transactions</h2>
-
-          <div className="space-y-4">
-            <TransactionItem
-              name="Keyboard"
-              type="Sale"
-              date="12 Feb 2026"
-            />
-            <TransactionItem
-              name="Mouse"
-              type="Purchase"
-              date="11 Feb 2026"
-            />
-            <TransactionItem
-              name="Monitor"
-              type="Sale"
-              date="10 Feb 2026"
-            />
-          </div>
-        </div>
-
-        {/* Low Stock Alerts */}
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <h2 className="text-lg font-medium mb-4">Low Stock Alerts</h2>
-
-          <div className="space-y-4">
-            <AlertItem product="Headphones" qty="3 left" />
-            <AlertItem product="USB Cable" qty="5 left" />
-            <AlertItem product="Webcam" qty="2 left" />
-          </div>
-        </div>
-
+      {/* Products Section */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Products</h2>
+        <button onClick={() => { setShowForm(!showForm); setEditingProduct(null); }}
+          className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
+          {showForm ? "Cancel" : "+ Add Product"}
+        </button>
       </div>
+
+      {showForm && (
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+          <h3 className="text-lg font-medium mb-4">
+            {editingProduct ? "Edit Product" : "Add New Product"}
+          </h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Name", name: "name" },
+              { label: "Category", name: "category" },
+              { label: "Price", name: "price", type: "number" },
+              { label: "Quantity", name: "quantity", type: "number" },
+              { label: "Image URL", name: "img" },
+              { label: "Supplier", name: "addedby", type: "number" },
+            ].map(({ label, name, type = "text" }) => (
+              <div key={name}>
+                <label className="block text-sm text-gray-600 mb-1">{label}</label>
+                <input type={type} name={name} value={formData[name]} onChange={handleChange} required
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              </div>
+            ))}
+
+            <div className="col-span-2">
+              <label className="block text-sm text-gray-600 mb-1">Description</label>
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={3}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+
+            <div className="col-span-2">
+              <button type="submit"
+                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg font-medium">
+                {editingProduct ? "Update Product" : "Add Product"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Products Table */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100 text-gray-600">
+            <tr>
+              <th className="text-left px-4 py-3">Name</th>
+              <th className="text-left px-4 py-3">Category</th>
+              <th className="text-left px-4 py-3">Price</th>
+              <th className="text-left px-4 py-3">Qty</th>
+              <th className="text-left px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.id} className="border-t hover:bg-gray-50">
+                <td className="px-4 py-3">{p.name}</td>
+                <td className="px-4 py-3">{p.category}</td>
+                <td className="px-4 py-3">₹{p.price}</td>
+                <td className="px-4 py-3">{p.quantity}</td>
+                <td className="px-4 py-3 flex gap-2">
+                  <button onClick={() => handleEdit(p)}
+                    className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(p.id)}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {products.length === 0 && (
+              <tr><td colSpan={5} className="text-center py-6 text-gray-400">No products yet</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 };
-
-const StatCard = ({ title, value }) => (
-  <div className="bg-white p-5 rounded-xl shadow-sm">
-    <p className="text-gray-500 text-sm">{title}</p>
-    <h3 className="text-2xl font-bold mt-2 text-gray-800">{value}</h3>
-  </div>
-);
-
-const TransactionItem = ({ name, type, date }) => (
-  <div className="flex justify-between items-center border-b pb-2">
-    <div>
-      <p className="font-medium text-gray-700">{name}</p>
-      <p className="text-sm text-gray-500">{date}</p>
-    </div>
-    <span
-      className={`text-sm px-3 py-1 rounded-full ${
-        type === "Sale"
-          ? "bg-green-100 text-green-600"
-          : "bg-blue-100 text-blue-600"
-      }`}
-    >
-      {type}
-    </span>
-  </div>
-);
-
-const AlertItem = ({ product, qty }) => (
-  <div className="flex justify-between items-center border-b pb-2">
-    <p className="text-gray-700">{product}</p>
-    <span className="text-sm text-red-500 font-medium">{qty}</span>
-  </div>
-);
 
 export default AdminDashboard;
