@@ -43,9 +43,9 @@ const Login = () => {
         alert("Login successful!");  
 
         if (role === "admin") {
-          navigate("/admin/dashboard");
+          window.location.href = "/admin/dashboard"
         } else if (role === "staff") {
-          navigate("/staff/dashboard");
+          window.location.href = "/staff/dashboard"
         }
       } else {
         alert("Login failed: " + data.detail);
