@@ -23,7 +23,8 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    role: str 
+    role: str
+    user_id: int
 
 class ProductResponse(BaseModel):
     id: str # PK for produtc
@@ -67,4 +68,17 @@ class PaginatedProductResponse(BaseModel):
     page_size: int
     total_pages: int
 
+class SaleCreate(BaseModel):
+    product_id: str
+    quantity_sold: int
+    sold_by: int
 
+class SaleResponse(BaseModel):
+    id: int
+    product_id: str
+    quantity_sold: int
+    sold_by: int
+    sale_date: str
+
+    class Config:
+        from_attributes = True

@@ -33,3 +33,15 @@ class Product(Base):
     addedby = Column(Integer, ForeignKey("users.id"))
     
     user = relationship("User", back_populates="products")
+
+class Sale(Base):
+    __tablename__ = "sales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(String, ForeignKey("products.id"))
+    quantity_sold = Column(Integer)
+    sold_by = Column(Integer, ForeignKey("users.id"))  
+    sale_date = Column(String) 
+
+    product = relationship("Product")
+    staff = relationship("User")

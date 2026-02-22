@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import date
 import json
 import models
 import schemas
@@ -78,7 +79,7 @@ def login(
         )
 
     access_token = create_access_token(data={"sub": user.email_id})
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role, "user_id": user.id}
 
 
 @app.put("/users/verify/{user_id}", response_model=schemas.UserResponse)
@@ -163,3 +164,49 @@ def delete_product(product_id: str, db: Session = Depends(get_db), current_user:
     db.delete(product)
     db.commit()
     return None
+
+@app.post("/sales", response_model=schemas.SaleResponse, status_code=status.HTTP_201_CREATED)
+def create_sale(sale: schemas.SaleCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+
+    product = db.query(models.Product).filter(models.Product.id == sale.product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if sale.quantity_sold > product.quantity:
+        raise HTTPException(status_code=400, detail=f"Not enough stock. Available: {product.quantity}")
+    
+    product.quantity -= sale.quantity_sold
+
+    new_sale = models.Sale(
+        product_id=sale.product_id,
+        quantity_sold=sale.quantity_sold,
+        sold_by=current_user.id,
+        sale_date=str(date.today())
+    )
+
+    db.add(new_sale)
+    db.commit()
+    db.refresh(new_sale)
+    return new_sale
+
+@app.get("/stats")
+def get_stats(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    total_products = db.query(models.Product).count()
+    
+    total_sales = db.query(func.sum(models.Sale.quantity_sold)).scalar() or 0
+    
+    sales = db.query(models.Sale).all()
+    total_revenue = 0
+    for sale in sales:
+        product = db.query(models.Product).filter(models.Product.id == sale.product_id).first()
+        if product:
+            total_revenue += sale.quantity_sold * product.price
+
+    low_stock = db.query(models.Product).filter(models.Product.quantity <= models.Product.restock).count()
+
+    return {
+        "total_products": total_products,
+        "total_sales": total_sales,
+        "total_revenue": total_revenue,
+        "low_stock": low_stock
+    }

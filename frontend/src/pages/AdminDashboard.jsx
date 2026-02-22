@@ -4,7 +4,14 @@ const AdminDashboard = () => {
   const [pendingStaff, setPendingStaff] = useState([]);
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null); 
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const [stats, setStats] = useState({
+    total_products: 0,
+    total_sales: 0,
+    total_revenue: 0,
+    low_stock: 0
+  });
 
   const [formData, setFormData] = useState({
     name: "", category: "", price: "", quantity: "",
@@ -16,6 +23,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchPendingStaff();
     fetchProducts();
+    fetchStats();
   }, []);
 
   //Staff
@@ -41,6 +49,13 @@ const AdminDashboard = () => {
       const data = await res.json();
       setProducts(data.items);
     }
+  };
+
+  const fetchStats = async () => {
+    const res = await fetch("http://127.0.0.1:8000/stats", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setStats(await res.json());
   };
 
   const handleChange = (e) => {
@@ -73,8 +88,10 @@ const AdminDashboard = () => {
       alert(editingProduct ? "Product updated!" : "Product added!");
       setShowForm(false);
       setEditingProduct(null);
-      setFormData({ name: "", category: "", price: "", quantity: "",
-        description: "", img: "", restock: 5, status: "active", addedby: 1 });
+      setFormData({
+        name: "", category: "", price: "", quantity: "",
+        description: "", img: "", restock: 5, status: "active", addedby: 1
+      });
       fetchProducts();
     } else {
       alert("Something went wrong");
@@ -83,7 +100,7 @@ const AdminDashboard = () => {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
-    setFormData(product);  
+    setFormData(product);
     setShowForm(true);
   };
 
@@ -95,6 +112,13 @@ const AdminDashboard = () => {
     });
     fetchProducts();
   };
+
+  const StatCard = ({ title, value }) => (
+    <div className="bg-white p-6 rounded-xl shadow-sm text-center">
+      <h3 className="text-lg font-medium text-gray-700">{title}</h3>
+      <p className="text-xl font-semibold text-indigo-600">{value}</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -199,6 +223,14 @@ const AdminDashboard = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 pt-10 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <StatCard title="Total Products" value={stats.total_products} />
+        <StatCard title="Low Stock Items" value={stats.low_stock} />
+        <StatCard title="Items Sold" value={stats.total_sales} />
+        <StatCard title="Total Revenue" value={`₹${stats.total_revenue.toFixed(2)}`} />
       </div>
 
     </div>
