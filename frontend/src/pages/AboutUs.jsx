@@ -44,43 +44,6 @@ const AboutUs = () => {
           </div>
         </div>
       </section>
-
-      {/* Stats Section */}
-      {/* <section className="container mx-auto px-6 py-24">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-12">
-          <div className="md:w-1/2">
-            <h2 className="text-3xl font-bold mb-6">Our journey so far</h2>
-            <p className="text-slate-600 mb-6">
-              What started as a tool for a local warehouse has grown into a 
-              platform used by thousands of businesses worldwide. We’re just 
-              getting started.
-            </p>
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <div className="text-3xl font-black text-blue-600">10k+</div>
-                <div className="text-sm font-bold uppercase text-slate-400">Users</div>
-              </div>
-              <div>
-                <div className="text-3xl font-black text-blue-600">5M+</div>
-                <div className="text-sm font-bold uppercase text-slate-400">SKUs Tracked</div>
-              </div>
-            </div>
-          </div>
-          <div className="md:w-1/2 w-full h-64 bg-slate-200 rounded-2xl flex items-center justify-center text-slate-400 font-bold italic">
-            [Team Image or Office Photo Placeholder]
-          </div>
-        </div>
-      </section> */}
-
-      {/* Basic Footer CTA */}
-      <footer className="bg-slate-900 text-white py-16 text-center">
-        <div className="container mx-auto px-6">
-          <h2 className="text-2xl font-bold mb-6">Want to join the mission?</h2>
-          <button className="border border-white px-8 py-3 rounded-lg font-bold hover:bg-white hover:text-slate-900 transition-colors">
-            View Careers
-          </button>
-        </div>
-      </footer>
     </div>
   )
 }
