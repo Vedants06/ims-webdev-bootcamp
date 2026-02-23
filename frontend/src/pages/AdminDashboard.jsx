@@ -3,6 +3,7 @@ const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 const AdminDashboard = () => {
   const [pendingStaff, setPendingStaff] = useState([]);
+  const [staffList, setStaffList] = useState([]);
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -22,6 +23,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchPendingStaff();
+    fetchStaffList();
     fetchProducts();
     fetchStats();
     fetchReports();
@@ -33,33 +35,55 @@ const AdminDashboard = () => {
     const res = await fetch(`${BACKEND_URL}/users/unverified`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) setPendingStaff(await res.json());
   };
+
+  const fetchStaffList = async () => {
+    const res = await fetch(`${BACKEND_URL}/users/staff`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) setStaffList(await res.json());
+  };
+
   const approveStaff = async (id) => {
     await fetch(`${BACKEND_URL}/users/verify/${id}`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
     fetchPendingStaff();
+    fetchStaffList();
   };
+
+  const handleDeleteStaff = async (id) => {
+    if (!window.confirm("Remove this staff member?")) return;
+    await fetch(`${BACKEND_URL}/users/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchStaffList();
+    fetchStaffReport();
+  };
+
   const fetchProducts = async () => {
     const res = await fetch(`${BACKEND_URL}/products`);
     if (res.ok) { const data = await res.json(); setProducts(data.items); }
   };
+
   const fetchStats = async () => {
     const res = await fetch(`${BACKEND_URL}/stats`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) setStats(await res.json());
   };
+
   const fetchReports = async () => {
     const res = await fetch(`${BACKEND_URL}/reports`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) setReports(await res.json());
   };
+
   const fetchCategories = async () => {
     const res = await fetch(`${BACKEND_URL}/categories`);
     if (res.ok) setCategories(await res.json());
   };
+
   const fetchStaffReport = async () => {
-    const res = await fetch(`${BACKEND_URL}/reports/staff`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(`${BACKEND_URL}/reports/staff`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) setStaffReport(await res.json());
   };
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const url = editingProduct ? `${BACKEND_URL}/products/${editingProduct.id}` : `${BACKEND_URL}/products`;
@@ -76,12 +100,15 @@ const AdminDashboard = () => {
       fetchProducts(); fetchStats();
     } else alert("Something went wrong");
   };
+
   const handleEdit = (product) => { setEditingProduct(product); setFormData(product); setShowForm(true); };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product?")) return;
     await fetch(`${BACKEND_URL}/products/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
     fetchProducts(); fetchStats();
   };
+
   const handleAddCategory = async (e) => {
     e.preventDefault();
     const res = await fetch(`${BACKEND_URL}/categories`, {
@@ -92,6 +119,7 @@ const AdminDashboard = () => {
     if (res.ok) { setNewCategory(""); fetchCategories(); }
     else { const data = await res.json(); alert(data.detail); }
   };
+
   const handleDeleteCategory = async (id) => {
     if (!window.confirm("Delete this category?")) return;
     await fetch(`${BACKEND_URL}/categories/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
@@ -165,16 +193,12 @@ const AdminDashboard = () => {
       {/* Staff Sales Report */}
       <div className="bg-white p-6 rounded-2xl mb-8 border border-slate-200">
         <h2 className="text-lg font-semibold mb-4 text-slate-800">Staff Sales Report</h2>
-
         {staffReport.length === 0
           ? <p className="text-slate-500">No staff sales data yet.</p>
           : staffReport.map((s) => (
             <div key={s.email} className="mb-2">
-
-              {/* Staff Row */}
               <div
-                className="flex justify-between items-center py-3 px-2 rounded-lg cursor-pointer hover:bg-slate-50"
-                style={{ borderBottom: '1px solid #e2e8f0' }}
+                className="flex justify-between items-center py-3 px-2 rounded-lg cursor-pointer hover:bg-slate-50 border-b border-slate-100"
                 onClick={() => setExpandedStaff(expandedStaff === s.email ? null : s.email)}
               >
                 <div>
@@ -194,7 +218,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Expanded Product Breakdown */}
               {expandedStaff === s.email && (
                 <div className="mt-2 ml-4 mb-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Products Sold</p>
@@ -208,14 +231,13 @@ const AdminDashboard = () => {
                     ))}
                 </div>
               )}
-
             </div>
           ))}
       </div>
 
       {/* Products Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl ml-1 mb-3 font-semibold text-slate-800">Products</h2>
+        <h2 className="text-xl font-semibold text-slate-800">Products</h2>
         <button onClick={() => { setShowForm(!showForm); setEditingProduct(null); }}
           className="px-4 py-2 rounded-lg text-white text-sm font-medium bg-teal-700 hover:bg-teal-800">
           {showForm ? "Cancel" : "+ Add Product"}
@@ -318,7 +340,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Pending Staff */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200">
+      <div className="bg-white p-6 rounded-2xl mb-6 border border-slate-200">
         <h2 className="text-xl font-semibold mb-4 text-slate-800">Pending Staff Approval</h2>
         {pendingStaff.length === 0
           ? <p className="text-slate-500">No staff pending approval.</p>
@@ -335,6 +357,29 @@ const AdminDashboard = () => {
             </div>
           ))}
       </div>
+
+      {/* All Staff */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200">
+        <h2 className="text-xl font-semibold mb-4 text-slate-800">All Staff</h2>
+        {staffList.length === 0
+          ? <p className="text-slate-500">No staff members yet.</p>
+          : staffList.map(staff => (
+            <div key={staff.id} className="flex justify-between items-center py-3 border-b border-slate-100">
+              <div>
+                <p className="font-medium text-slate-800">{staff.first_name} {staff.last_name}</p>
+                <p className="text-sm text-slate-500">{staff.email_id}</p>
+                <span className={`text-xs font-medium ${staff.verified ? 'text-green-600' : 'text-amber-500'}`}>
+                  {staff.verified ? 'Verified' : 'Pending'}
+                </span>
+              </div>
+              <button onClick={() => handleDeleteStaff(staff.id)}
+                className="px-4 py-1.5 rounded-lg text-white text-sm font-medium bg-red-500 hover:bg-red-600">
+                Remove
+              </button>
+            </div>
+          ))}
+      </div>
+
     </div>
   );
 };

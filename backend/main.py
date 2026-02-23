@@ -81,6 +81,20 @@ def login(
     access_token = create_access_token(data={"sub": user.email_id})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "user_id": user.id}
 
+@app.get("/users/staff", response_model=list[schemas.UserResponse])
+def list_staff(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can view staff")
+    
+    return db.query(models.User).filter(models.User.role == "staff").all()
+
+@app.get("/users/unverified", response_model=list[schemas.UserResponse])
+def list_unverified_staff(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can see unverified staff")
+    
+    staff_list = db.query(models.User).filter(models.User.role == "staff", models.User.verified == False).all()
+    return staff_list
 
 @app.put("/users/verify/{user_id}", response_model=schemas.UserResponse)
 def verify_staff(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -96,14 +110,18 @@ def verify_staff(user_id: int, db: Session = Depends(get_db), current_user: mode
     db.refresh(user)
     return user
 
-
-@app.get("/users/unverified", response_model=list[schemas.UserResponse])
-def list_unverified_staff(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+@app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_staff(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can see unverified staff")
+        raise HTTPException(status_code=403, detail="Only admin can remove staff")
     
-    staff_list = db.query(models.User).filter(models.User.role == "staff", models.User.verified == False).all()
-    return staff_list
+    user = db.query(models.User).filter(models.User.id == user_id, models.User.role == "staff").first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    
+    db.delete(user)
+    db.commit()
+    return None
 
 # Product endpoints
 
@@ -305,3 +323,4 @@ def get_staff_report(db: Session = Depends(get_db), current_user: models.User = 
         })
 
     return report
+
